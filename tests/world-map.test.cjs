@@ -1,0 +1,30 @@
+const test=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm');
+const load=require('./load-app.cjs');
+test('illustrated world is the default, with vector fallback and original art available',()=>{
+  const c=load('EpicMap/app.js'),api=c.window.EPICMAP;
+  vm.runInContext('window.MAP_TEST={draw,drawMini,images:IMG};',c);
+  const t=c.window.MAP_TEST;let native=0;
+  const actual=c.window.EpicWorldMap.draw;
+  c.window.EpicWorldMap.draw=(...args)=>{native++;return actual(...args)};
+  assert.equal(api.S.worldStyle,'illustrated');t.draw();t.drawMini();assert.equal(native,2);
+  assert.equal(t.images.has('world/elanthia_illustrated.png'),true);
+  assert.equal(t.images.has('world/elanthia_hd.jpg'),false);
+  assert.equal(t.images.has('world/elanthia_night.jpg'),false);
+  c.document.getElementById('worldStyle').onchange({target:{value:'atlas'}});
+  native=0;t.draw();t.drawMini();assert.equal(native,2);
+  api.S.layers.base=false;native=0;t.draw();t.drawMini();assert.equal(native,0);
+  api.S.layers.base=true;
+  c.document.getElementById('worldStyle').onchange({target:{value:'original'}});
+  native=0;t.draw();t.drawMini();assert.equal(native,0);assert.equal(t.images.has('world/elanthia_night.jpg'),true);
+  c.document.getElementById('worldStyle').onchange({target:{value:'invalid'}});
+  assert.equal(api.S.worldStyle,'original');
+});
+test('native paths are reused and geographic labels can be independently hidden',()=>{
+  const c=load('EpicMap/app.js');let paths=0,labels=0;
+  c.Path2D=class{constructor(){paths++}};
+  const canvas=c.document.getElementById('map').getContext('2d');canvas.fillText=()=>labels++;
+  c.window.EpicWorldMap.draw(canvas,1600,1000,{labels:false,mini:true});
+  assert.equal(labels,0);const cached=paths;
+  c.window.EpicWorldMap.draw(canvas,3200,2000,{labels:false,mini:true});assert.equal(paths,cached);
+  c.window.EpicWorldMap.draw(canvas,1600,1000,{labels:true});assert.ok(labels>1);
+});

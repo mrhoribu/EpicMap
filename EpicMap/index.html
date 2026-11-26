@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elanthia · Epic Map</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<div id="stage">
+  <div id="sky"></div>
+  <div id="plane"><canvas id="map"></canvas></div>
+  <div id="fog"></div><div id="vignette"></div><div id="grain"></div>
+</div>
+
+<header id="top">
+  <div class="brand"><span class="sigil">✦</span><div><b>ELANTHIA</b><small>EPIC MAP · GemStone IV</small></div></div>
+  <div class="searchwrap">
+    <input id="search" placeholder="Search rooms, room #, areas, creatures, towns…  ( / )" autocomplete="off" spellcheck="false">
+    <div id="results"></div>
+  </div>
+  <div class="tools">
+    <button id="btnTilt" title="Toggle 3D tilt (T)">3D</button>
+    <select id="followCharacter" aria-label="Follow character" title="Choose which character to follow"><option value="">Auto</option></select>
+    <button id="btnFollow" class="follow" title="Follow character (F)">◎ Follow</button>
+    <button id="btnHome" title="World view (H)">⌂</button>
+  </div>
+</header>
+
+<button id="showLeft" class="panel-restore" aria-controls="left" aria-expanded="true" hidden>Show controls</button>
+<aside id="left" aria-label="Map controls">
+  <div class="panel-toolbar"><span>Map controls</span><button id="hideLeft" aria-controls="left" aria-expanded="true" title="Hide map controls (B)">Hide &lsaquo;</button></div>
+  <nav class="tabs"><button data-tab="hunt" class="on">⚔ Hunting Finder</button><button data-tab="layers">☰ Layers</button><button data-tab="live">◉ Live</button></nav>
+  <section id="tab-hunt" class="tab on">
+    <div class="lvlrow">
+      <label>Level <input id="lvMin" type="number" min="0" max="120" value="55"></label>
+      <span>to</span>
+      <label><input id="lvMax" type="number" min="0" max="120" value="65"></label>
+      <select id="regionSel"><option value="">All regions</option></select>
+    </div>
+    <div class="presets"><button data-p="55,65">Group L55–65</button><button data-p="50,60">Easier</button><button data-p="60,72">Push</button><label class="chk"><input type="checkbox" id="strict"> all mobs in range</label></div>
+    <div id="huntCount" class="muted"></div>
+    <div id="huntList"></div>
+    <p class="fine">Levels: gswiki.play.net creature pages (518 of 519 checked agree with huntplan.lic). Mobs without a gswiki page show “huntplan”. Spawn rooms from huntplan.lic.</p>
+  </section>
+  <section id="tab-layers" class="tab">
+    <fieldset class="preferences"><legend>Preferences</legend>
+      <label class="chk"><input id="rememberPreferences" type="checkbox" checked> Remember my preferences</label>
+      <p class="fine">Save hunting filters, layers, map view, tracking controls, and panel visibility in this browser.</p>
+      <div class="preference-actions"><button id="savePreferences">Save now</button><button id="resetPreferences">Reset preferences</button></div>
+      <p id="preferencesStatus" class="fine" role="status" aria-live="polite"></p>
+    </fieldset>
+    <button id="readableDefaults">Reset to readable defaults</button>
+    <p class="fine">Area names, hunting labels, and individual room names have separate controls. Original map images contain printed text that these switches cannot remove.</p>
+    <div id="layerList"></div>
+    <label class="chk" for="worldStyle">World background
+      <select id="worldStyle"><option value="illustrated">Illustrated atlas</option><option value="atlas">Minimal vector atlas</option><option value="original">Original artwork</option></select>
+    </label>
+    <p class="fine">New terrain artwork with crisp, separate labels. Room positions are unchanged; illustrated geography is not a travel route.</p>
+    <p class="fine">Shading groups mapped rooms with the same location title. It is an approximate visual guide, not a warcamp boundary or a detection system.</p>
+    <div class="sep"></div>
+    <label class="chk"><input type="checkbox" id="optNight"> Night-ink original images (optional)</label>
+    <label class="chk"><input type="checkbox" id="optFx"> Film grain and character glow</label>
+    <div class="legend">
+      <div><i class="lg town"></i>Town</div><div><i class="lg hunt"></i>Hunting area (in range)</div><div><i class="lg hot"></i>Above range</div><div><i class="lg cold"></i>Below range</div>
+      <div><i class="lg svc"></i>Service / shop</div><div><i class="lg gld"></i>Guild</div><div><i class="lg you"></i>Live character</div>
+    </div>
+  </section>
+  <section id="tab-live" class="tab">
+    <div id="liveStatus" class="livestatus off">Not connected</div>
+    <p class="muted" id="liveHelp">Live tracking needs the companion script. In Lich: <code>;epicmap</code> then open <code>http://localhost:7337</code>. Every character running <code>;epicmap</code> shows up here.</p>
+    <p id="followStatus" class="muted" aria-live="polite">No live characters yet.</p>
+    <div id="liveChars"></div>
+    <label class="chk"><input type="checkbox" id="optTrail" checked> Show path trail</label>
+    <label class="chk"><input type="checkbox" id="optAutoArea" checked> Zoom to room level when enabling Follow</label>
+    <p class="fine">Movement keeps your chosen zoom. Drag to look around without turning Follow off; the next character move resumes following. Use F to pause it.</p>
+    <label class="chk" for="trailFade">Trail fades after
+      <select id="trailFade">
+        <option value="30">30 seconds</option><option value="60">1 minute</option>
+        <option value="120" selected>2 minutes</option><option value="300">5 minutes</option>
+        <option value="600">10 minutes</option><option value="0">Never</option>
+      </select>
+    </label>
+    <button id="btnClearTrail">Clear trails</button>
+    <p class="fine">Clear starts a fresh trail. Old steps fade while this map is open.</p>
+  </section>
+</aside>
+
+<aside id="right" class="closed"><button id="closeRight">×</button><div id="detail"></div></aside>
+
+<div id="hud">
+  <div id="tier">WORLD</div>
+  <div id="coords"></div>
+</div>
+<div id="zoomctl"><button id="zin">+</button><div id="zbar"><div id="zknob"></div></div><button id="zout">−</button></div>
+<button id="showMinimap" class="panel-restore" aria-controls="minimapWrap" aria-expanded="true" hidden>Show minimap</button>
+<div id="minimapWrap"><button id="hideMinimap" aria-controls="minimapWrap" aria-expanded="true" title="Hide minimap (M)">Hide &times;</button><canvas id="minimap" width="240" height="184"></canvas><div class="compass">N</div></div>
+<div id="tip"></div>
+<div id="toast"></div>
+
+<dialog id="areaDlg"><div class="dlghead"><b id="areaTitle"></b><span class="sp"></span><label class="chk"><input type="checkbox" id="areaNight"> Night ink</label><button id="areaClose">Close ×</button></div><canvas id="areaCanvas"></canvas><div id="areaInfo" class="muted"></div></dialog>
+
+<script src="gs4map-data.js"></script>
+<script src="readability.js"></script>
+<script src="world-map.js"></script>
+<script src="preference-store.js"></script>
+<script src="panels.js"></script>
+<script src="app.js"></script>
+<script src="preferences.js"></script>
+</body></html>

@@ -1,0 +1,14 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const load=require('./load-app.cjs');
+const ctx=load('EpicMap/app.js');
+vm.runInContext('window.FOLLOW_TEST={followName,chooseFollow,poll,renderLivePanel};',ctx);
+const t=ctx.window.FOLLOW_TEST,api=ctx.window.EPICMAP,doc=ctx.document;const saved=new Map();ctx.localStorage={setItem:(k,v)=>saved.set(k,v),getItem:k=>saved.get(k)??null,removeItem:k=>saved.delete(k)};
+api.live.host='Vaelzhar';api.setCharPos('Vaelzhar',228,'Host',[223]);api.setCharPos('Vaelgore',149,'Other',[150]);
+assert.equal(t.followName(),'Vaelzhar');
+doc.getElementById('followCharacter').onchange({target:{value:'Vaelgore'}});
+assert.equal(t.followName(),'Vaelgore');assert(api.S.follow);assert.equal(doc.getElementById('btnFollow').textContent,'Follow: Vaelgore');assert.equal(saved.get('epicmap.followCharacter'),'Vaelgore');
+api.setCharPos('Vaelzhar',229,'Host moved',[223,228]);assert.equal(t.followName(),'Vaelgore');
+api.setFollow(false);assert(doc.getElementById('followStatus').textContent.includes('paused'));assert.equal(t.followName(),'Vaelgore');
+ctx.fetch=async()=>({ok:true,json:async()=>({host:'Vaelzhar',chars:[{name:'Vaelzhar',id:229,title:'Host',trail:[223,228]}]})});
+(async()=>{await t.poll();assert.equal(t.followName(),null,'offline selected character must not fall back to host');assert(doc.getElementById('followStatus').textContent.includes('Waiting for Vaelgore'));assert(doc.getElementById('followCharacter').innerHTML.includes('Vaelgore (offline)'));
+ctx.fetch=async()=>({ok:true,json:async()=>({host:'Vaelzhar',chars:[{name:'Vaelzhar',id:229,title:'Host',trail:[223,228]},{name:'Vaelgore',id:149,title:'Returned',trail:[]}]})});await t.poll();assert.equal(t.followName(),'Vaelgore');assert.equal(api.S.follow,false,'poll must preserve paused mode');api.setFollow(true);assert.equal(t.followName(),'Vaelgore');t.chooseFollow('');assert.equal(t.followName(),'Vaelzhar');assert(!saved.has('epicmap.followCharacter'));console.log(JSON.stringify({passed:true,checks:'Dropdown switches follow target, button name, remembered choice, other-character movement, pause, disconnected target waits, reconnect, Auto mode, trail regression checks run separately'}))})().catch(e=>{console.error(e);process.exitCode=1});

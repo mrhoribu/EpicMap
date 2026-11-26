@@ -1,0 +1,105 @@
+name: Release
+
+# Publishes a GitHub release built from the repository.
+#
+# Either push a tag that matches package.json (git tag v1.2.6 && git push origin v1.2.6),
+# or run this workflow from the Actions tab on a branch; it tags that commit as
+# v<package.json version>. A tag with a suffix, such as v1.2.6-rc.1, makes a prerelease.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="v$version"
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+              echo "::error::Tag $tag already exists. Bump the version in package.json, or push the tag to release it."
+              exit 1
+            fi
+          fi
+          case "$tag" in
+            "v$version"|"v$version"-*) ;;
+            *) echo "::error::Tag $tag does not match package.json version $version"; exit 1 ;;
+          esac
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::A release for $tag already exists"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+
+      - name: Offline regression tests
+        run: |
+          mkdir -p work
+          node --test --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=tap --test-reporter-destination=work/node-test.tap tests/*.test.cjs
+
+      - name: Headless browser checks
+        run: npm run test:browser
+
+      - name: Build release assets
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: node tools/release.cjs --tag "$TAG" --out dist
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: release-notes
+          path: |
+            dist/release-notes.md
+            dist/release.json
+            dist/SHA256SUMS.txt
+            work/browser-check/
+          if-no-files-found: ignore
+
+      - name: Publish release
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          tag="$TAG"
+          title=$(node -p "require('./dist/release.json').title")
+          args=(--title "$title" --notes-file dist/release-notes.md)
+          if [ "$(node -p "require('./dist/release.json').prerelease")" = true ]; then
+            args+=(--prerelease)
+          fi
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            args+=(--verify-tag)
+          else
+            args+=(--target "$GITHUB_SHA")
+          fi
+          mapfile -t assets < <(node -p "require('./dist/release.json').assets.map(a => 'dist/' + a).join('\n')")
+          gh release create "$tag" -R "$GITHUB_REPOSITORY" "${args[@]}" "${assets[@]}"
+          echo "Published $(gh release view "$tag" -R "$GITHUB_REPOSITORY" --json url -q .url)" >> "$GITHUB_STEP_SUMMARY"

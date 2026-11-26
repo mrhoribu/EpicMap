@@ -1,0 +1,14 @@
+# Keep every file byte-for-byte as committed. The package mixes LF and CRLF
+# files (for example "Epic Map.url" and some tests), and the release ZIPs must
+# match the repository exactly.
+* -text
+
+# Repository-only files. `git archive`, which builds the release ZIP, skips these.
+/.github            export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/README.md          export-ignore
+/CHANGELOG.md       export-ignore
+/docs               export-ignore
+/tools              export-ignore
+/package-lock.json  export-ignore

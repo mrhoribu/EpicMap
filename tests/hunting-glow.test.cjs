@@ -1,0 +1,16 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const load=require('./load-app.cjs');
+const ctx=load('EpicMap/app.js');
+vm.runInContext('window.GLOW_TEST={draw,recomputeZones,glow:GLOW.in,status:()=>zoneStat};',ctx);
+const api=ctx.window.EPICMAP,t=ctx.window.GLOW_TEST;const canvas=ctx.document.getElementById('map').getContext('2d');
+for(const id of ['top','left','right','minimapWrap'])ctx.document.getElementById(id).getBoundingClientRect=()=>({width:0,height:0,left:0,top:0});
+let halos=0,contours=0;canvas.drawImage=image=>{if(image===t.glow)halos++};canvas.stroke=()=>{if(canvas.strokeStyle==='#62f0a4'&&canvas.shadowBlur===12)contours++};
+const zone=api.zones.find(z=>/Coastal Woods/.test(z.name));api.cam.x=zone.x;api.cam.y=zone.y;api.cam.z=.05;
+Object.assign(api.S,{lvMin:8,lvMax:17,fx:false});t.recomputeZones();assert(api.S.layers.huntGlow);t.draw();assert(halos>0,'in-range halo works with atmosphere off');
+halos=0;api.S.layers.hunt=false;api.S.layers.huntLabels=false;api.S.layers.zoneFill=false;t.draw();assert(halos>0,'glow independent of markers/labels/shading');
+halos=0;api.S.layers.huntGlow=false;t.draw();assert.equal(halos,0,'separate toggle turns glow off');
+api.S.layers.huntGlow=true;Object.assign(api.S,{lvMin:200,lvMax:200});t.recomputeZones();t.draw();assert.equal(halos,0,'out-of-range areas do not glow');
+Object.assign(api.S,{lvMin:8,lvMax:17,region:'does not exist'});t.recomputeZones();t.draw();assert.equal(halos,0,'region filter applies');
+Object.assign(api.S,{region:'',strict:true,lvMin:zone.lo,lvMax:zone.lo});t.recomputeZones();assert.notEqual(t.status()[api.zones.indexOf(zone)],'in','strict excludes mixed-level area');
+Object.assign(api.S,{strict:false,lvMin:8,lvMax:17});t.recomputeZones();api.cam.x=8250;api.cam.y=13500;api.cam.z=.8;t.draw();assert(contours>0,'eligible mapped rooms get glowing detail outlines');
+console.log(JSON.stringify({passed:true,checks:'Glow default, separate toggle, independence from effects and markers, level/region/strict filters, glowing detailed boundaries'}));

@@ -1,0 +1,18 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const load=require('./load-app.cjs');
+const ctx=load('EpicMap/app.js');
+vm.runInContext('window.TRAIL_TEST={syncTrail,visibleTrail,clearTrails,drawTrail};window.clock=1000;Date.now=()=>window.clock;',ctx);
+const api=ctx.window.EPICMAP,t=ctx.window.TRAIL_TEST;
+api.setCharPos('Test',228,'Start',[223,224]);let c=api.live.chars.get('Test');assert.equal(t.visibleTrail(c).length,2);
+ctx.window.clock=61000;api.setCharPos('Test',228,'Start',[223,224]);assert.equal(t.visibleTrail(c)[0].alpha,.5,'poll must not refresh old step ages');
+t.clearTrails();assert.equal(t.visibleTrail(c).length,0);
+ctx.window.clock=62000;api.setCharPos('Test',228,'Start',[223,224]);assert.equal(t.visibleTrail(c).length,0,'poll must not restore cleared steps');
+ctx.window.clock=63000;api.setCharPos('Test',229,'Next',[223,224,228]);assert.equal(t.visibleTrail(c).length,1);assert.equal(t.visibleTrail(c)[0].id,228);
+ctx.window.clock=123000;assert.equal(t.visibleTrail(c)[0].alpha,.5);
+ctx.window.clock=183000;assert.equal(t.visibleTrail(c).length,0,'old step expires at its lifetime');
+api.S.trailFadeSec=0;assert.equal(t.visibleTrail(c).length,1,'Never keeps post-reset steps');
+const revisit={trail:[],trailTimes:[]};t.syncTrail(revisit,[1,2,1],100);t.syncTrail(revisit,[2,1,2],200);assert.deepEqual(Array.from(revisit.trailTimes),[100,100,200]);t.syncTrail(revisit,[1,2,3],300);assert.deepEqual(Array.from(revisit.trailTimes),[100,200,300]);t.syncTrail(revisit,[],400);assert.equal(revisit.trailTimes.length,0);
+api.setCharPos('Second',228,'Another',[223]);t.clearTrails();for(const ch of api.live.chars.values())assert.equal(t.visibleTrail(ch).length,0);
+ctx.window.clock=184000;api.setCharPos('Test',230,'Demo movement');assert.equal(t.visibleTrail(c).at(-1).id,229,'local/demo movement records a step');
+c.disp=c.pos||[0,0];t.drawTrail(c,'#ffffff');
+console.log(JSON.stringify({passed:true,checks:'Aging, smooth half-life opacity, expiry, reset survives polls, new steps after reset, Never mode, revisits, truncated server history, all-character reset, demo trail, renderer initialization'}));

@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+
+      - name: Offline regression tests
+        run: |
+          mkdir -p work
+          node --test --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=tap --test-reporter-destination=work/node-test.tap tests/*.test.cjs
+
+      - name: Headless browser checks
+        run: npm run test:browser
+
+      # Builds the release assets and notes without publishing, so packaging
+      # problems and CHANGELOG mistakes show up before a release is tagged.
+      - name: Release dry run
+        run: |
+          version=$(node -p "require('./package.json').version")
+          node tools/release.cjs --tag "v$version" --out dist
+          cat dist/release-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: release-dry-run
+          path: |
+            dist/release-notes.md
+            dist/release.json
+            dist/SHA256SUMS.txt
+            work/browser-check/
+          if-no-files-found: ignore

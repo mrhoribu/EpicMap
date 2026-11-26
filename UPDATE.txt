@@ -1,0 +1,17 @@
+EpicMap 1.2.5 update - 2026-11-25
+
+Copy the included EpicMap folder over your existing Lich5/EpicMap folder.
+Keep existing maps, night, world and gs4map-data.js files; do not remove them.
+The update replaces the application files and adds the illustrated background.
+The Lich companion script and room database are unchanged.
+
+Reload the open map with Ctrl+F5 after the copy completes.
+Layers > World background selects Illustrated, Minimal vector or Original.
+Your existing browser preferences remain; the new default is Illustrated.
+
+Following keeps your chosen zoom when moving between maps.
+Dragging leaves Follow enabled and resumes on the next character movement.
+Use F or the Follow button to intentionally pause it.
+
+The illustrated background is decorative and AI-assisted, based on the
+credited Simutronics artwork. It is not new official geography or route data.

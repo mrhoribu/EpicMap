@@ -1,0 +1,11 @@
+EpicMap 1.2.5 - illustrated world and steady navigation
+
+This is a complete installation. Copy EpicMap into your Lich folder.
+Copy scripts/epicmap.lic into your Lich scripts folder. Run ;epicmap.
+Existing users: replace the EpicMap folder and reload with Ctrl+F5.
+Include world-map.js, preference-store.js, preferences.js and panels.js.
+Keep world/elanthia_illustrated.png with the EpicMap folder.
+Open Layers > Preferences to save, disable saving, or reset settings.
+Layers > World background selects Illustrated, Minimal vector or Original.
+Dragging no longer switches Follow off. Movement preserves your selected zoom.
+No restart of the Lich companion is needed for this browser-only update.
