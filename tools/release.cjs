@@ -268,7 +268,7 @@ function renderNotes({ args, changes, update, previousTag, verification, sums, c
 
   const zipWord = update && update.zip ? 'Both ZIPs were' : 'The ZIP was';
   lines.push('## Verification', '');
-  lines.push(`All ${verification.tests} offline regression tests and ${verification.browserChecks.length} headless-browser check groups passed. ${zipWord} built by GitHub Actions from commit ${commit.slice(0, 7)}.`, '');
+  lines.push(`All ${verification.tests} offline regression tests and ${verification.browserChecks.length} headless-browser check groups passed. ${zipWord} built ${process.env.GITHUB_ACTIONS === 'true' ? 'by GitHub Actions ' : ''}from commit ${commit.slice(0, 7)}.`, '');
   lines.push('<details><summary>Browser checks</summary>', '');
   for (const check of verification.browserChecks) lines.push(`- ${check}`);
   lines.push('', '</details>', '');

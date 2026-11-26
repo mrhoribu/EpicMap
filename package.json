@@ -7,7 +7,7 @@
     "test": "node --test tests/*.test.cjs",
     "test:browser": "node tests/browser-check.cjs",
     "check": "node --check EpicMap/app.js && node --check EpicMap/world-map.js && node --check EpicMap/preferences.js",
-    "release:build": "bash tools/build-release.sh"
+    "release:build": "node tools/release.cjs"
   },
   "devDependencies": {
     "playwright": "1.65.1"
